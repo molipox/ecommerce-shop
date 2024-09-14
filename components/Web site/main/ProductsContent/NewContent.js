@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 
 const NewContent = () => {
@@ -7,8 +7,39 @@ const NewContent = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState(0);
   const [singleImage, setSingleImage] = useState(null);
+  const [multipleImages, setMultipleImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
-  async function handleSubmit(event) {
+  const handleDrop = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const files = Array.from(event.dataTransfer.files);
+    setMultipleImages(files);
+
+    const previews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews(previews);
+  }, []);
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleFileChange = (event) => {
+    const files = Array.from(event.target.files);
+    setMultipleImages(files);
+
+    const previews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews(previews);
+  };
+
+  const handleSingleImageChange = (event) => {
+    const file = event.target.files[0];
+    setSingleImage(file);
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData();
     formData.append("title", title);
@@ -16,8 +47,10 @@ const NewContent = () => {
     formData.append("price", price.toString()); // Convert price to string
 
     if (singleImage) {
-      formData.append("singleImage", singleImage); // Ensure image is attached
+      formData.append("singleImage", singleImage); // Attach single image
     }
+
+    multipleImages.forEach((file) => formData.append("images", file)); // Attach multiple images
 
     try {
       const response = await axios.post('/api/products', formData, {
@@ -29,19 +62,20 @@ const NewContent = () => {
     } catch (error) {
       console.error('Error submitting form:', error);
     }
-  }
+  };
 
   return (
     <div className='bg-white w-full m-5 rounded-lg ml-0 p-5'>
       <div className='flex flex-col'>
         <h1 className="text-blue-900 px-1 font-semibold text-3xl mb-4">New Product</h1>
         <form className='flex flex-col' onSubmit={handleSubmit}>
-          <label className='text-blue-900 px-1'>Product name</label>
-          <input 
+          <label className='text-blue-900 px-1'>Product name <span className='text-red-500'>*</span></label>
+          <input  
             value={title} 
             onChange={(e) => setTitle(e.target.value)} 
             type="text" 
-            placeholder='product name' 
+            required={true}
+            placeholder='Product name' 
             className='mb-3 mt-1 text-blue-900 border border-gray-300 rounded-md focus:border-2 focus:border-blue-900 px-1 py-1' 
           />
           <label className='text-blue-900 px-1'>Description</label>
@@ -49,22 +83,93 @@ const NewContent = () => {
             value={description} 
             onChange={(e) => setDescription(e.target.value)}  
             className='mb-3 mt-1 text-blue-900 border border-gray-300 rounded-md focus:border-2 focus:border-blue-900 px-1 py-1' 
-            placeholder='description'
+            placeholder='Description'
           />
-          <label className='text-blue-900 px-1'>Price (in USD)</label>
+          <label className='text-blue-900 px-1'>Price (in USD) <span className='text-red-500'>*</span></label>
           <input 
             value={price} 
             onChange={(e) => setPrice(parseFloat(e.target.value))} // Convert input to number
             type="number" 
-            placeholder='price' 
+            required={true}
+            placeholder='Price' 
             className='mb-3 mt-1 text-blue-900 border border-gray-300 rounded-md focus:border-2 focus:border-blue-900 px-1 py-1'
           />
-          <input 
-            type="file" 
-            accept="image/*" 
-            id='singleImage' 
-            onChange={(e) => setSingleImage(e.target.files[0])} // Correctly set the file
-          />
+          
+          {/* Single Image Input with Drag & Drop */}
+          <label className='text-blue-900 px-1 mb-3'>Main Product Image <span className='text-red-500'>*</span></label>
+          <div 
+            className='border-2 border-dashed border-gray-300 p-4 text-center rounded-md cursor-pointer mb-4'
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const file = e.dataTransfer.files[0];
+              if (file) {
+                setSingleImage(file);
+                const preview = URL.createObjectURL(file);
+                setImagePreviews([preview, ...imagePreviews]);
+              }
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={() => document.getElementById('singleImage').click()} // Trigger file input on click
+          >
+            <input 
+              id='singleImage'
+              type="file" 
+              accept="image/*" 
+              onChange={handleSingleImageChange}
+              className='hidden' // Hide the input
+              required={true}
+            />
+            <p>Drag & Drop image here or click to select image</p>
+            {/* Display single image preview if available */}
+          </div>
+            <div>
+            {singleImage && (
+              <img 
+                src={URL.createObjectURL(singleImage)} 
+                alt="Single Preview" 
+                className='w-32 h-32 object-cover mt-2  rounded-lg border-2 border-black'
+              />
+            )}
+            </div>
+          
+          {/* Multiple Images Drag & Drop */}
+          <label className='text-blue-900 px-1 mb-3 mt-3'>Product Images <span className='text-red-500'>*</span></label>
+          <div 
+            className='border-2 border-dashed border-gray-300 p-4 text-center rounded-md cursor-pointer mb-4'
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onClick={() => document.getElementById('multipleImages').click()} // Trigger file input on click
+          >
+            <input 
+              id='multipleImages'
+              type="file" 
+              accept="image/*" 
+              multiple
+              required={true}
+              onChange={handleFileChange}
+              className='hidden' // Hide the input
+            />
+            <p>Drag & Drop images here or click to select images</p>
+          </div>
+          
+          {/* Display multiple images previews if available */}
+          <div className='mt-4 flex gap-2 flex-wrap'>
+            {imagePreviews.map((src, index) => (
+              
+
+              <img 
+                key={index} 
+                src={src} 
+                alt={`Preview ${index}`} 
+                className='w-32 h-32 object-cover mb-2 rounded-lg border-2 border-black'
+              />
+            ))}
+          </div>
+          
           <button type='submit' className='bg-blue-900 w-fit text-white rounded-md py-1 px-2 mt-2'>Save</button>
         </form>
       </div>
