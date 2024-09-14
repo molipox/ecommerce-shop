@@ -5,6 +5,8 @@ import * as dateFn from "date-fns";
 import { NextResponse } from "next/server";
 import sharp from 'sharp';
 import { connectToDatabase } from "@/lib/mongodb"; // Adjust path if necessary
+import cloudinary from "@/Utils/cloudinary/page";
+import { stringify } from "querystring";
 
 export async function POST(request) {
   try {
@@ -25,29 +27,36 @@ export async function POST(request) {
     const processImage = async (file) => {
       const buffer = Buffer.from(await file.arrayBuffer());
 
-      // Compress the image using sharp
-      
+      // Compress the image using sharp (optional)
+      const compressedBuffer = await sharp(buffer)
+        .resize(500) // Resize to 500px width
+        .toBuffer();
 
-      const relativeUploadDir = `/uploads/${dateFn.format(Date.now(), "dd-MM-yyyy")}`;
-      const uploadDir = join(process.cwd(), "public", relativeUploadDir);
+      // Correct path construction with 'join'
+      const relativeUploadDir = join("uploads", dateFn.format(Date.now(), "dd-MM-yyyy"));
+      const uploadDir = join(process.cwd(), relativeUploadDir); // Full path to uploads directory
 
+      // Ensure the directory exists
       try {
         await stat(uploadDir);
       } catch (e) {
-        // Directory doesn't exist, create it
         if (e.code === "ENOENT") {
+          // Directory doesn't exist, create it
           await mkdir(uploadDir, { recursive: true });
         } else {
-          throw new Error("Error while creating directory");
+          throw new Error("Error while creating directory: " + e.message);
         }
       }
 
+      // Generate a unique filename
       const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
       const filename = `${file.name.replace(/\.[^/.]+$/, "")}-${uniqueSuffix}.${mime.getExtension(file.type)}`;
 
-      await writeFile(`${uploadDir}/${filename}`, buffer);
+      // Save the image to the filesystem
+      const filePath = join(uploadDir, filename);
+      await writeFile(filePath, compressedBuffer); // Save the compressed image
 
-      return `${relativeUploadDir}/${filename}`;
+      return join(relativeUploadDir, filename);
     };
 
     // Process single image
@@ -66,19 +75,34 @@ export async function POST(request) {
       uploadedImageUrls.push(imageUrl);
     }
 
+    // Upload images to Cloudinary
+    let cloudinarySingle = "" ;
+    const result2 = await cloudinary.uploader.upload(singleImageUrl, {
+      folder: "Main Product Image",
+    });
+    cloudinarySingle = result2.secure_url;
+    // Save the single image URL to Cloudinary
+    const cloudinaryUrls = [];
+    for (const imageUrl of uploadedImageUrls) {
+      const result = await cloudinary.uploader.upload(imageUrl, {
+        folder: "Product Images",
+      });
+      cloudinaryUrls.push(result.secure_url); // Collect Cloudinary URLs
+    }
+
     // Prepare data for MongoDB
     const product = {
       title,
       description,
       price,
-      singleImageUrl, // Single image URL
-      multipleImageUrls: uploadedImageUrls, // Array of multiple image URLs
-      createdAt: new Date()
+      singleImageUrl: cloudinarySingle, // Single image URL
+      multipleImageUrls: cloudinaryUrls, // Array of Cloudinary image URLs
+      createdAt: new Date(),
     };
 
     // Save to MongoDB
     const { db } = await connectToDatabase();
-    const collection = db.collection('products');
+    const collection = db.collection("products");
     await collection.insertOne(product);
 
     // Return success response

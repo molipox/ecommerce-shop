@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
-
+import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 const NewContent = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -39,28 +40,42 @@ const NewContent = () => {
     setSingleImage(file);
   };
 
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData();
+    
+    // Append form data
     formData.append("title", title);
     formData.append("description", description);
     formData.append("price", price.toString()); // Convert price to string
-
+  
+    // Check if single image exists before appending
     if (singleImage) {
       formData.append("singleImage", singleImage); // Attach single image
     }
-
-    multipleImages.forEach((file) => formData.append("images", file)); // Attach multiple images
-
+  
+    // Append multiple images if they exist
+    if (multipleImages && multipleImages.length > 0) {
+      multipleImages.forEach((file) => formData.append("images", file)); // Attach multiple images
+    }
+  
     try {
       const response = await axios.post('/api/products', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
+      
       console.log('Response:', response.data);
+  
+      // Redirect after successful form submission
+      
+  
     } catch (error) {
       console.error('Error submitting form:', error);
+  
+      // Handle error more gracefully if needed (e.g., show user feedback)
     }
   };
 
