@@ -11,9 +11,9 @@ export async function GET() {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate', // No caching at all
-        'Pragma': 'no-cache',  // HTTP 1.0 no-cache directive
-        'Expires': '0',  // Expire immediately
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error) {

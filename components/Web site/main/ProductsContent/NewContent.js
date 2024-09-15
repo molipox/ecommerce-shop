@@ -161,7 +161,7 @@ const NewContent = () => {
               type="file" 
               accept="image/*" 
               multiple
-              required={false} // Remove required if not needed
+               // Remove required if not needed
               onChange={handleFileChange}
               className='hidden' // Hide the input
             />
