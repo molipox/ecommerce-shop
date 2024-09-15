@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useSession, signIn, signOut } from "next-auth/react";
 export default function LayoutV2({children}) {
   const { data: session} = useSession();
+  
   if(!session){
     return (
     

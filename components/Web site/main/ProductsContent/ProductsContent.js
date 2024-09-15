@@ -3,53 +3,60 @@ import Image from 'next/image';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-
+import { OrbitProgress } from 'react-loading-indicators';
 const ProductsContent = () => {
+  console.log("i rendered");
   const [products, setProducts] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true); // Added loading state
-
-  const apiUrl = '/api/products'; // Ensure this URL is correct
-
+  const [fetched,setFetched] = useState(false);
+  const[hidden,setHidden] = useState("");
   useEffect(() => {
-    // Fetch products from API
-    axios.get(apiUrl)
-      .then(response => {
-        setProducts(response.data); // Update state with fetched products
-        setLoading(false); // Set loading to false after data is fetched
-      })
-      .catch(error => {
-        setError(error.message); // Set error message if something goes wrong
-        setLoading(false); // Set loading to false on error
-        console.error('Error:', error);
-      });
-  }, [apiUrl]); // Empty dependency array means this effect runs once on mount
-
+    axios("/api/ProductsGet")
+    .then((response) => {
+      setProducts(response.data);
+      console.log(response.data);
+      setFetched(true);
+      setHidden("hidden");
+    })
+    .catch((error) => {
+      console.error('Error fetching products:', error);
+    });
+  }, [])
+      
   return (
     <div className='bg-white w-full m-5 rounded-lg ml-0 p-5'>
       <Link href={"/products/new"} className='text-white bg-blue-900 rounded-md px-2 py-1'>
         Add New Product
       </Link>
-      <div>
-        {loading ? (
-          <p>Loading...</p> // Display loading state
-        ) : error ? (
-          <p className='text-red-500'>{error}</p> // Display error message if any
-        ) : products.length > 0 ? (
-          <ul>
-            {products.map((product, index) => (
-              <li key={index}>
-                {/* Replace these fields with the actual fields of your product */}
-                <h2>{product.title}</h2>
-                <p>{product.description}</p>
-                {/* Add other product details here */}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No products found</p>
+      <p className='mt-8 py-3 px-2 rounded-t-lg bg-blue-300'>Products Name</p>
+      <div className={`flex mt-52 justify-center ${hidden}`}>
+        {fetched === false ? (
+                  <OrbitProgress color="#1e3a8a" size="medium" text="" textColor="" />
+        ):(
+          <div></div>
         )}
+        
+      
+        
       </div>
+        <div>
+          { products.map((product) =>
+                (
+                 <div className='border flex justify-between py-2 px-2'>
+                  <p>{product.title}</p>
+                  <div className='text-white text-[15px] flex gap-3'>
+                    <Link href={`/products/edit/${product._id}`} className='flex py-1 px-3 rounded-lg items-center gap-1 bg-blue-900'>
+                    <i class='bx bxs-pencil'></i>
+                    <p>Edit</p>
+                    </Link>
+                    <Link href={{pathname:`/products/delete/${product._id}/${product.title}`}} className='flex py-1 px-2 rounded-lg items-center gap-1 bg-blue-900'>
+                    <i class='bx bxs-trash'></i>
+                    <p>Delete</p>
+                    </Link>
+                  </div>
+                 </div>
+                )
+          )}
+        </div>
     </div>
   );
 }

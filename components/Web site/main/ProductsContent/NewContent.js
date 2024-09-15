@@ -1,8 +1,7 @@
-"use client";
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
-import { redirect } from 'next/navigation';
 import { useRouter } from 'next/navigation';
+
 const NewContent = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -10,6 +9,8 @@ const NewContent = () => {
   const [singleImage, setSingleImage] = useState(null);
   const [multipleImages, setMultipleImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+
+  const router = useRouter(); 
 
   const handleDrop = useCallback((event) => {
     event.preventDefault();
@@ -40,7 +41,6 @@ const NewContent = () => {
     setSingleImage(file);
   };
 
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData();
@@ -70,12 +70,10 @@ const NewContent = () => {
       console.log('Response:', response.data);
   
       // Redirect after successful form submission
-      
+      router.push("/products");
   
     } catch (error) {
       console.error('Error submitting form:', error);
-  
-      // Handle error more gracefully if needed (e.g., show user feedback)
     }
   };
 
@@ -86,6 +84,7 @@ const NewContent = () => {
         <form className='flex flex-col' onSubmit={handleSubmit}>
           <label className='text-blue-900 px-1'>Product name <span className='text-red-500'>*</span></label>
           <input  
+            name="title" // Add name attribute
             value={title} 
             onChange={(e) => setTitle(e.target.value)} 
             type="text" 
@@ -95,13 +94,15 @@ const NewContent = () => {
           />
           <label className='text-blue-900 px-1'>Description</label>
           <textarea 
+            name="description" // Add name attribute
             value={description} 
             onChange={(e) => setDescription(e.target.value)}  
             className='mb-3 mt-1 text-blue-900 border border-gray-300 rounded-md focus:border-2 focus:border-blue-900 px-1 py-1' 
             placeholder='Description'
           />
-          <label className='text-blue-900 px-1'>Price (in USD) <span className='text-red-500'>*</span></label>
+          <label className='text-blue-900 px-1'>Price (in MAD) <span className='text-red-500'>*</span></label>
           <input 
+            name="price" // Add name attribute
             value={price} 
             onChange={(e) => setPrice(parseFloat(e.target.value))} // Convert input to number
             type="number" 
@@ -124,14 +125,12 @@ const NewContent = () => {
                 setImagePreviews([preview, ...imagePreviews]);
               }
             }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onDragOver={handleDragOver}
             onClick={() => document.getElementById('singleImage').click()} // Trigger file input on click
           >
             <input 
               id='singleImage'
+              name="singleImage" // Add name attribute
               type="file" 
               accept="image/*" 
               onChange={handleSingleImageChange}
@@ -139,17 +138,14 @@ const NewContent = () => {
               required={true}
             />
             <p>Drag & Drop image here or click to select image</p>
-            {/* Display single image preview if available */}
           </div>
-            <div>
-            {singleImage && (
-              <img 
-                src={URL.createObjectURL(singleImage)} 
-                alt="Single Preview" 
-                className='w-32 h-32 object-cover mt-2  rounded-lg border-2 border-black'
-              />
-            )}
-            </div>
+          {singleImage && (
+            <img 
+              src={URL.createObjectURL(singleImage)} 
+              alt="Single Preview" 
+              className='w-32 h-32 object-cover mt-2  rounded-lg border-2 border-black'
+            />
+          )}
           
           {/* Multiple Images Drag & Drop */}
           <label className='text-blue-900 px-1 mb-3 mt-3'>Product Images <span className='text-red-500'>*</span></label>
@@ -161,10 +157,11 @@ const NewContent = () => {
           >
             <input 
               id='multipleImages'
+              name="multipleImages" // Add name attribute
               type="file" 
               accept="image/*" 
               multiple
-              required={true}
+              required={false} // Remove required if not needed
               onChange={handleFileChange}
               className='hidden' // Hide the input
             />
@@ -174,8 +171,6 @@ const NewContent = () => {
           {/* Display multiple images previews if available */}
           <div className='mt-4 flex gap-2 flex-wrap'>
             {imagePreviews.map((src, index) => (
-              
-
               <img 
                 key={index} 
                 src={src} 
