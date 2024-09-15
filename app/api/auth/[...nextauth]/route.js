@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import client from "@/lib/db";
 
+
 const handler = NextAuth({
   providers: [
     GoogleProvider({
@@ -13,12 +14,13 @@ const handler = NextAuth({
   adapter: MongoDBAdapter(client),
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // Always redirect to the home page after signing in
+      // Check if the URL is an internal route or an external URL
       if (url.startsWith(baseUrl)) return url;
-      // Otherwise redirect to the home page
-      return baseUrl;
+      // Otherwise redirect to the base URL configured in environment variables
+      return process.env.NEXTAUTH_URL || baseUrl;
     },
   },
 });
+
 
 export { handler as GET, handler as POST };

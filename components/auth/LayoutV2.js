@@ -1,7 +1,10 @@
 "use client"
 import Image from "next/image";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 export default function LayoutV2({children}) {
+  const path = usePathname();
+  console.log(path);
   const { data: session} = useSession();
   
   if(!session){
@@ -9,7 +12,8 @@ export default function LayoutV2({children}) {
     
       <main className="bg-white h-screen flex justify-center items-center">
         <div>
-          <button className="bg-black text-white px-12 py-3 rounded-2xl" onClick={() => {signIn("google")}}>
+          <button className="bg-black text-white px-12 py-3 rounded-2xl" onClick={() => {signIn("google",{
+                  callbackUrl: process.env.NEXTAUTH_URL || "http://localhost:3000"})}}>
             sign in
           </button>
         </div>
