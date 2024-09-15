@@ -88,15 +88,15 @@ export async function POST(request) {
         folder: "Product Images",
       });
       cloudinaryUrls.push(result.secure_url); // Collect Cloudinary URLs
+      cloudinaryUrls.push(cloudinarySingle);
     }
 
     // Prepare data for MongoDB
     const product = {
-      title,
+      name:title,
       description,
       price,
-      singleImageUrl: cloudinarySingle, // Single image URL
-      multipleImageUrls: cloudinaryUrls, // Array of Cloudinary image URLs
+      images: cloudinaryUrls, // Array of Cloudinary image URLs
       createdAt: new Date(),
     };
 
