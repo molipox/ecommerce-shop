@@ -142,7 +142,7 @@ const NewContent = () => {
           {singleImage && (
             <img 
               src={URL.createObjectURL(singleImage)} 
-              alt="Single Preview" 
+              alt="Single Preview main one" 
               className='w-32 h-32 object-cover mt-2  rounded-lg border-2 border-black'
             />
           )}
@@ -174,7 +174,7 @@ const NewContent = () => {
               <img 
                 key={index} 
                 src={src} 
-                alt={`Preview ${index}`} 
+                alt={`Preview ${index + 1}`} 
                 className='w-32 h-32 object-cover mb-2 rounded-lg border-2 border-black'
               />
             ))}

@@ -41,7 +41,7 @@ const ProductsContent = () => {
         <div>
           { products.map((product) =>
                 (
-                 <div className='border flex justify-between py-2 px-2'>
+                 <div key={product._id} className='border flex justify-between py-2 px-2'>
                   <p>{product.title}</p>
                   <div className='text-white text-[15px] flex gap-3'>
                     <Link href={`/products/edit/${product._id}`} className='flex py-1 px-3 rounded-lg items-center gap-1 bg-blue-900'>
