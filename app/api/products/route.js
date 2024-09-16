@@ -1,12 +1,8 @@
 import mime from "mime";
-import { join } from "path";
-import { stat, mkdir, writeFile } from "fs/promises";
-import * as dateFn from "date-fns";
 import { NextResponse } from "next/server";
 import sharp from 'sharp';
 import { connectToDatabase } from "@/lib/mongodb"; // Adjust path if necessary
 import cloudinary from "@/Utils/cloudinary/page";
-import { stringify } from "querystring";
 
 export async function POST(request) {
   try {
@@ -19,12 +15,12 @@ export async function POST(request) {
     const multipleImages = formData.getAll('images');
 
     // Validate required fields
-    if (!title || !description || isNaN(price) || !singleImage || !multipleImages) {
+    if (!title || !description || isNaN(price) || !singleImage || !multipleImages.length) {
       return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }
 
-    // Function to process and save images
-    const processImage = async (file) => {
+    // Function to process and upload image to Cloudinary
+    const uploadToCloudinary = async (file) => {
       const buffer = Buffer.from(await file.arrayBuffer());
 
       // Compress the image using sharp (optional)
@@ -32,75 +28,35 @@ export async function POST(request) {
         .resize(500) // Resize to 500px width
         .toBuffer();
 
-      // Correct path construction with 'join'
-      const relativeUploadDir = join("uploads", dateFn.format(Date.now(), "dd-MM-yyyy"));
-      const uploadDir = join(process.cwd(), relativeUploadDir); // Full path to uploads directory
+      // Directly upload to Cloudinary
+      const result = await cloudinary.uploader.upload(`data:image/jpeg;base64,${compressedBuffer.toString('base64')}`, {
+        folder: "Product Images",
+        resource_type: "image" // Auto detect the image type
+      });
 
-      // Ensure the directory exists
-      try {
-        await stat(uploadDir);
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          // Directory doesn't exist, create it
-          await mkdir(uploadDir, { recursive: true });
-        } else {
-          throw new Error("Error while creating directory: " + e.message);
-        }
-      }
-
-      // Generate a unique filename
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      const filename = `${file.name.replace(/\.[^/.]+$/, "")}-${uniqueSuffix}.${mime.getExtension(file.type)}`;
-
-      // Save the image to the filesystem
-      const filePath = join(uploadDir, filename);
-      await writeFile(filePath, compressedBuffer); // Save the compressed image
-
-      return join(relativeUploadDir, filename);
+      return result.secure_url;
     };
 
-    // Process single image
-    const singleImageUrl = singleImage ? await processImage(singleImage) : null;
-    if (singleImageUrl?.error) {
-      return NextResponse.json({ error: singleImageUrl.error }, { status: 500 });
-    }
+    // Process and upload single image
+    const singleImageUrl = await uploadToCloudinary(singleImage);
 
-    // Process multiple images
+    // Process and upload multiple images
     const uploadedImageUrls = [];
     for (const file of multipleImages) {
-      const imageUrl = await processImage(file);
-      if (imageUrl.error) {
-        return NextResponse.json({ error: imageUrl.error }, { status: 500 });
-      }
+      const imageUrl = await uploadToCloudinary(file);
       uploadedImageUrls.push(imageUrl);
     }
 
-    // Upload images to Cloudinary
-    let cloudinarySingle = "" ;
-    const result2 = await cloudinary.uploader.upload(singleImageUrl, {
-      folder: "Main Product Image",
-    });
-    cloudinarySingle = result2.secure_url;
-    // Save the single image URL to Cloudinary
-    const cloudinaryUrls = [];
-    for (const imageUrl of uploadedImageUrls) {
-      const result = await cloudinary.uploader.upload(imageUrl, {
-        folder: "Product Images",
-      });
-      cloudinaryUrls.push(result.secure_url); // Collect Cloudinary URLs
-      cloudinaryUrls.push(cloudinarySingle);
-    }
-
-    // Prepare data for MongoDB
+    // Prepare product data for MongoDB
     const product = {
-      name:title,
+      name: title,
       description,
       price,
-      images: cloudinaryUrls, // Array of Cloudinary image URLs
+      images: [singleImageUrl, ...uploadedImageUrls], // Single and multiple images combined
       createdAt: new Date(),
     };
 
-    // Save to MongoDB
+    // Save product to MongoDB
     const { db } = await connectToDatabase();
     const collection = db.collection("products");
     await collection.insertOne(product);
