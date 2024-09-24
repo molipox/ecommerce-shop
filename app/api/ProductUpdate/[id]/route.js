@@ -1,27 +1,30 @@
-import mime from "mime";
 import { NextResponse } from "next/server";
 import sharp from 'sharp';
 import { connectToDatabase } from "@/lib/mongodb"; // Adjust path if necessary
 import cloudinary from "@/Utils/cloudinary/page";
+import { ObjectId } from "mongodb";
 
-export async function POST(request) {
+export async function POST(request, { params }) {
+  let title, description, price, singleImage, multipleImages;
+
   try {
     const formData = await request.formData();
 
-    const title = formData.get('title');
-    const description = formData.get('description');
-    const price = parseFloat(formData.get('price')); // Convert price to a number
-    const singleImage = formData.get('singleImage');
-    const multipleImages = formData.getAll('images');
+    title = formData.get('title');
+    description = formData.get('description');
+    price = parseFloat(formData.get('price')); // Convert price to a number
+    singleImage = formData.get('singleImage');
+    multipleImages = formData.getAll('images');
 
     // Validate required fields
     if (!title || !description || isNaN(price) || !singleImage || !multipleImages.length) {
-      return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
+      return NextResponse.json({ error: "Missing or invalid fields" ,title,description,price,singleImage,multipleImages}, { status: 400 });
     }
 
     // Function to process and upload image to Cloudinary
     const uploadToCloudinary = async (file) => {
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const arrayBuffer = await file.arrayBuffer(); // Read the file as an ArrayBuffer
+      const buffer = Buffer.from(arrayBuffer); // Convert ArrayBuffer to Buffer
 
       // Compress the image using sharp (optional)
       const compressedBuffer = await sharp(buffer)
@@ -39,7 +42,7 @@ export async function POST(request) {
 
     // Process and upload single image
     const singleImageUrl = await uploadToCloudinary(singleImage);
-
+    
     // Process and upload multiple images
     const uploadedImageUrls = [];
     for (const file of multipleImages) {
@@ -47,28 +50,28 @@ export async function POST(request) {
       uploadedImageUrls.push(imageUrl);
     }
 
-    // Prepare product data for MongoDB
-    const product = {
-      name: title,
-      description,
-      price,
-      images: [singleImageUrl, ...uploadedImageUrls], // Single and multiple images combined
-      createdAt: new Date(),
-    };
-
     // Save product to MongoDB
     const { db } = await connectToDatabase();
-    const collection = db.collection("products");
-    await collection.insertOne(product);
+    await db.collection('products').updateOne(
+      { _id: new ObjectId(params.id) }, // filter (which document to replace)
+      {
+        $set: {
+          name: title,
+          description: description,
+          price: price,
+          images: [singleImageUrl, ...uploadedImageUrls],
+          updatedAt: new Date(),
+        }
+      } // the new document to replace the existing one
+    );
 
     // Return success response
     return NextResponse.json({
-      message: "Product saved successfully",
-      product,
+      message: "Product updated successfully",
     });
 
   } catch (error) {
     console.error("Error handling file upload and database operation:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }

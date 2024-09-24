@@ -4,10 +4,9 @@ import { TrophySpin } from 'react-loading-indicators';
 
 export default function LayoutV2({ children }) {
   const { user, error, isLoading } = useUser();
-
+  
   if (isLoading) return <div className='h-screen flex justify-center items-center '><TrophySpin color="#1e3a8a" size="medium" text="" textColor="" /></div>;
   if (error) return <div>{error.message}</div>;
-
   if (!user) {
     return (
       <main className="bg-white h-screen flex justify-center items-center">
@@ -31,3 +30,4 @@ export default function LayoutV2({ children }) {
     </main>
   );
 }
+

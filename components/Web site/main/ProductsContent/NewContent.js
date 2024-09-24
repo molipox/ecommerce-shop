@@ -40,6 +40,7 @@ const NewContent = () => {
     const file = event.target.files[0];
     setSingleImage(file);
   };
+  console.log(multipleImages);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -59,7 +60,6 @@ const NewContent = () => {
     if (multipleImages && multipleImages.length > 0) {
       multipleImages.forEach((file) => formData.append("images", file)); // Attach multiple images
     }
-  
     try {
       const response = await axios.post('/api/products', formData, {
         headers: {
